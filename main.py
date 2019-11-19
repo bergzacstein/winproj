@@ -23,4 +23,27 @@ def lazy_imshow(image, grey=True):
         plt.imshow(image)
     plt.show()
 
+def global_preprocessing(image):
+    #Converts from RGB to HSV
+    image_hsv = skimage.color.rgb2hsv(image)
+    image = image[:,:,0]
+    return image
+
+def edge_detection(image):
+    nb_floors = None
+    return nb_floors
+
+def detect_contrast(image):
+    nb_floors = None
+    return nb_floors
+
+def count_floors(windows_list):
+    """From a list of coordinates, corresponding to positions of windows,
+    guesses the number of floors of the building."""
+    nb_floors = None
+    return nb_floors
+
+def match_selection(image, selection):
+    nb_floors = None
+    return nb_floors
 
