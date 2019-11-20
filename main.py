@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import skimage
+import skimage, scipy
 from utils import *
 import matplotlib.pyplot as plt
 import skimage.morphology as morpho
@@ -44,6 +44,11 @@ def count_floors(windows_list):
     nb_floors = None
     return nb_floors
 
+def similarity_measure(A,B):
+    m = np.exp(-np.linalg.norm(B-A))
+    m /= np.exp(-np.linalg.norm(B))
+    return np.linalg.norm(B-A)/np.linalg.norm(B)
+
 def match_selection(image, selection, step = 4):
     """image : a numpy array corresponding to a picture.
     selection : ((topleft_x, topleft_y), (bottomright_x, bottoomright_y))"""
@@ -64,7 +69,7 @@ def match_selection(image, selection, step = 4):
             sub_selection_im = selection_im#[0:subsection.shape[0], 0:subsection.shape[1]]
             # We score the similarity between subsection and selection_im.
             # This can be done using various measures.
-            similarity = 1 - np.linalg.norm(sub_selection_im - subsection) / np.linalg.norm(selection_im)
+            similarity = similarity_measure(subsection, sub_selection_im)
             try:
                 # instead of creating a smaller image
                 # add a square of color similarity and of shape selection_im to
@@ -85,6 +90,40 @@ selection = ((708, 393), (757, 529))
 nb_floors, similarity_matrix = match_selection(im_grayscale, selection, 8)
 lazy_imshow(similarity_matrix)
 
-line_sum = np.sum(similarity_matrix, axis=1)
-plt.plot(line_sum)
+#median filtering
+#convolve with vertical [-1 0 1]
+
+im = im_grayscale
+im = scipy.signal.convolve2d(im, np.ones((10,10)))
+im = scipy.ndimage.filters.maximum_filter(im, 20)
+im = scipy.signal.medfilt(im)
+#im = scipy.signal.convolve2d(im, np.array([[-1],[0 ], [1]]))
+#im = im**2
+
+nb_floors, similarity_matrix = match_selection(im, selection, 8)
+
+#Detect windows borders with horizontal edge detections + sum on the rows
+#And then detect windows with vertical edge detections + sum on the columns
+#Use the peaks of these two sums to detect coordinates of a window
+#Search for this window, on the row of this window, using a match for euclidian distance. 
+#Use that to guess whether or not this detected window belongs to a floor (we should see a lot of windows)
+#Combine results of every detected window
+#???
+#Profit. 
+
+lazy_imshow(im)
+lazy_imshow(similarity_matrix)
+
+f = lazy_fft(im)
+lazy_imshow(f)
+
+im = similarity_matrix
+im = scipy.ndimage.filters.maximum_filter(im, 10)
+
+
+
+lazy_imshow(im)
+
+line_sum = np.sum(im, axis=1)
+plt.plot(np.log(line_sum))
 plt.show()
