@@ -1,0 +1,11 @@
+
+distortedPic=imread('images/building.tif');
+figure('Name','Measured Data');
+imshow(distortedPic);
+answer = inputdlg({'Right Down corner [x y]','Left down corner [x y]','Left up corner [x y]', 'Right up corner [x y]'},...
+              'Distorted locations',[1 25; 1 25; 1 25; 1 25]); 
+          
+rd = str2num(answer{1})
+rd = str2num(answer{1})
+rd = str2num(answer{1})
+rd = str2num(answer{1})
