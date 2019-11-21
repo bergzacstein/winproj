@@ -7,7 +7,7 @@ def exp_sim(A,B):
 
 def l2_sim(A,B):
     """Compares A to B (model) """
-    return np.linalg.norm(B-A, -2)/np.linalg.norm(B, 2)
+    return 1-np.linalg.norm(B-A)/np.linalg.norm(B)
 
 def cov_sim(A,B):
     return np.corrcoef()
