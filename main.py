@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import skimage
+import skimage, scipy
 from utils import *
 import matplotlib.pyplot as plt
+import skimage.morphology as morpho
 
 #Sets current working directory
 #import os
@@ -23,55 +24,73 @@ def lazy_imshow(image, grey=True):
         plt.imshow(image)
     plt.show()
 
-def global_preprocessing(image):
-    #Converts from RGB to HSV
-    image_hsv = skimage.color.rgb2hsv(image)
-    image = image_hsv[:,:,0]
-    return image
-
-def edge_detection(image):
-    nb_floors = None
-    return nb_floors
-
-def detect_contrast(image):
-    nb_floors = None
-    return nb_floors
-
 def count_floors(windows_list):
     """From a list of coordinates, corresponding to positions of windows,
     guesses the number of floors of the building."""
     nb_floors = None
     return nb_floors
 
-def match_selection(image, selection, step = 4):
-    """image : a numpy array corresponding to a picture.
-    selection : ((topleft_x, topleft_y), (bottomright_x, bottoomright_y))"""
-    #selection_im is the part of the image corresponding to the coordinate selection. 
-    selection_im = image[selection[0][0]:selection[1][0], selection[0][1]:selection[1][1]]
-    selection_width = np.abs(selection[0][0] - selection[1][0])
-    selection_height = np.abs(selection[1][1] - selection[0][1])
+def score_windowness(sim_matrix, ceil = 0.95):
+    """According to a similarity vector, return a windowness score.
+    This score is high if the window was found several times on the same row. 
+    The higher the value, the more likely it is to be a window. """
+    peaks = sim_matrix[sim_matrix >= np.quantile(sim_matrix, ceil)]
+    #Normalization
+    peaks = (peaks - min(peaks))
+    peaks = peaks / max(peaks)
+    #Take 100 best values
+    n = min(len(sim_matrix), 200)
+    peaks = peaks[np.argsort(peaks)[-n:]]
+    #A good number of windows on a row is between 
+    score = np.sum(peaks) / len(peaks)
+    return score
 
-    step = step #instead of doing pixel_wise comparison, we use a step. 
-    lines = image.shape[0] - selection_height
-    cols = image.shape[1] - selection_width
-    #similarity_matrix holds the result of our similarity test between selection and
-    # the subsection of image tested. 
-    similarity_matrix = np.zeros((int(lines/step), int(cols/step)))
-    for j in range(0, cols, step): #from left to right
-        for i in range(0, lines, step): #from top to bottom
-            # subsection is now a sample from our image. 
-            subsection = image[i:i+selection_width, j:j+selection_height]
-            # We score the similarity between subsection and selection_im.
-            # This can be done using various measures.
-            if selection_im.shape == subsection.shape: 
-                similarity = 1 - np.linalg.norm(selection_im - subsection) / np.linalg.norm(selection_im)
-                similarity_matrix[int(i/step), int(j/step)] = similarity
-    
-    nb_floors = None
-    return nb_floors, similarity_matrix
+from perf_kmeans import *
+
+import matchsel
+import importlib
+importlib.reload(matchsel)
+from matchsel import *
+
 
 image = skio.imread('img/telecom.jpeg')
-im_grayscale = skimage.color.rgb2hsv(image)[:,:,2]
-selection = ((708, 393), (757, 529))
+#We apply k-means classification on the picture. 
+clustered_image = apply_kmeans(image)
+lazy_imshow(clustered_image)
 
-nb_floors, similarity_matrix = match_selection(im_grayscale, selection)
+#We look for similar windows for this selection, which is an actual window. 
+selection = ((708, 393), (757, 529))
+similarity_matrix = horizontal_match_selection(clustered_image, selection, sim=l2_sim)
+print(score_windowness(similarity_matrix))
+
+# On a random selection, we see that the score is lower. This is great !
+stupid_selection = ((718, 1393), (757, 1529))
+similarity_matrix = horizontal_match_selection(clustered_image, stupid_selection, sim=l2_sim)
+print(score_windowness(similarity_matrix))
+
+plt.plot(similarity_matrix)
+plt.axhline(y=np.quantile(similarity_matrix, 0.95), color='r')
+plt.show()
+
+
+
+
+
+#selection = ((1412, 2572), (1722, 2784))
+#selection = ((1380, 1380), (1550,1550))
+#selection = ((1835, 758), (1897, 949))
+
+
+#median filtering
+#convolve with vertical [-1 0 1]
+
+#im = im_grayscale
+#im = scipy.signal.convolve2d(im, np.ones((10,10)))
+#im = scipy.ndimage.filters.maximum_filter(im, 20)
+#im = scipy.signal.medfilt(im)
+
+#im = similarity_matrix
+#im = scipy.ndimage.filters.maximum_filter(im, 10)
+
+
+
