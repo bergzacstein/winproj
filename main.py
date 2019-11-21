@@ -30,28 +30,51 @@ def count_floors(windows_list):
     nb_floors = None
     return nb_floors
 
+def score_windowness(sim_matrix, ceil = 0.95):
+    """According to a similarity vector, return a windowness score.
+    This score is high if the window was found several times on the same row. 
+    The higher the value, the more likely it is to be a window. """
+    peaks = sim_matrix[sim_matrix >= np.quantile(sim_matrix, ceil)]
+    #Normalization
+    peaks = (peaks - min(peaks))
+    peaks = peaks / max(peaks)
+    #Take 100 best values
+    n = min(len(sim_matrix), 200)
+    peaks = peaks[np.argsort(peaks)[-n:]]
+    #A good number of windows on a row is between 
+    score = np.sum(peaks) / len(peaks)
+    return score
+
+from perf_kmeans import *
+
 import matchsel
 import importlib
 importlib.reload(matchsel)
 from matchsel import *
 
-import perf_kmeans
-importlib.reload(perf_kmeans)
-from perf_kmeans import *
 
 image = skio.imread('img/telecom.jpeg')
 #We apply k-means classification on the picture. 
 clustered_image = apply_kmeans(image)
+lazy_imshow(clustered_image)
 
+#We look for similar windows for this selection, which is an actual window. 
 selection = ((708, 393), (757, 529))
-stupid_selection = ((0, 1300), (100, 1400))
-#We look for similar windows
-similarity_matrix = horizontal_match_selection(clustered_image, selection, sim=exp_sim)
+similarity_matrix = horizontal_match_selection(clustered_image, selection, sim=l2_sim)
+print(score_windowness(similarity_matrix))
+
+# On a random selection, we see that the score is lower. This is great !
+stupid_selection = ((718, 1393), (757, 1529))
+similarity_matrix = horizontal_match_selection(clustered_image, stupid_selection, sim=l2_sim)
+print(score_windowness(similarity_matrix))
+
 plt.plot(similarity_matrix)
+plt.axhline(y=np.quantile(similarity_matrix, 0.95), color='r')
 plt.show()
 
 
-lazy_imshow(clustered_image)
+
+
 
 #selection = ((1412, 2572), (1722, 2784))
 #selection = ((1380, 1380), (1550,1550))
