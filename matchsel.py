@@ -2,34 +2,34 @@ import numpy as np
 
 def exp_sim(A,B):
     """Compares A to B (model) using exponentials"""
-    m = np.exp(-np.linalg.norm(B-A))
-    m /= np.exp(-np.linalg.norm(B))
+    m = np.exp(-np.linalg.norm(B-A)) / np.exp(-np.linalg.norm(B))
     return m 
 
 def l2_sim(A,B):
     """Compares A to B (model) """
-    return 1-np.linalg.norm(B-A)/np.linalg.norm(B)
+    return np.linalg.norm(B-A, -2)/np.linalg.norm(B, 2)
 
 def cov_sim(A,B):
-    return np.cov(A,B)
+    return np.corrcoef()
 
 def horizontal_match_selection(image, selection, step=1, sim=l2_sim):
     """Given an image and a selection, look for 
     image : a numpy array corresponding to a picture.
     selection : ((topleft_x, topleft_y), (bottomright_x, bottoomright_y))"""
-    selection_im = image[selection[0][1]:selection[1][1], selection[0][0]:selection[1][0]]
-    selection_width = np.abs(selection[0][0] - selection[1][0])
-    selection_height = np.abs(selection[1][1] - selection[0][1])
-    line = selection[0][1] + selection_height//2
-    begin = 0 + selection_width//2
-    end = image.shape[1] - selection_width//2
+    selection_im = image[selection[0][1]:selection[1][1]+1, 
+                         selection[0][0]:selection[1][0]+1]
+    selection_width = selection_im.shape[1]
+    selection_height = selection_im.shape[0]
+    line = selection[0][1]
+    begin = 0
+    end = image.shape[1] - selection_width
     similarities = np.zeros((end-begin+1,))
-    horizontal_offset = 1 - selection_width % 2
-    vertical_offset = 1 - selection_height % 2
-    for row in range(begin, end, step):
-        sub_selection_im = image[line-selection_height//2:line+selection_height//2 + horizontal_offset,
-                                 row-selection_width//2:row+selection_width//2 + vertical_offset]
-        similarity = sim(sub_selection_im, selection_im )
+    similarity = 0
+    for row in range(begin, end):
+        if row % step == 0: #Every (step), we compute the similarity. Otherwise, propagated. 
+            sub_selection_im = image[line : line + selection_height ,
+                                    row   : row  + selection_width ]
+            similarity = sim(sub_selection_im, selection_im )
         similarities[row-begin] = similarity
     return similarities
 
