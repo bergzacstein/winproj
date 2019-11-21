@@ -5,6 +5,7 @@ import skimage, scipy
 from utils import *
 import matplotlib.pyplot as plt
 import skimage.morphology as morpho
+import cv2
 
 #Sets current working directory
 #import os
@@ -54,8 +55,17 @@ from matchsel import *
 
 
 image = skio.imread('img/telecom.jpeg')
+
+im = scipy.signal.medfilt(image)
+im = scipy.ndimage.filters.maximum_filter(im, 5)
+image_eq = skimage.exposure.equalize_hist(im)
+lazy_imshow(image_eq)
+
+
 #We apply k-means classification on the picture. 
-clustered_image = apply_kmeans(image)
+
+clustered_image = apply_kmeans(image_eq, [0, 255])
+clustered_image = scipy.signal.convolve2d(clustered_image, np.ones((3,3)))
 lazy_imshow(clustered_image)
 
 #We look for similar windows for this selection, which is an actual window. 
