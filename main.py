@@ -75,4 +75,3 @@ im_grayscale = skimage.color.rgb2hsv(image)[:,:,2]
 selection = ((708, 393), (757, 529))
 
 nb_floors, similarity_matrix = match_selection(im_grayscale, selection)
-skio.imsave('images/sim.bmp', similarity_matrix)
