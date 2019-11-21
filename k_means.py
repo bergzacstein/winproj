@@ -221,7 +221,7 @@ plt.axhline(y = window_quantile, color = 'r')
 plt.plot(line_sum_windows)
 windows_peaks.show()
 
-# Test with moving average and quantiles
+# moving average and quantiles
 # Removing negative values for floors
 line_sum_floors= line_sum_floors[ line_sum_floors >= 0]
 line_sum_floors = np.convolve(line_sum_floors, np.ones((5,))/5, mode='valid')
@@ -232,6 +232,7 @@ plt.axhline(y = floor_quantile, color = 'r')
 floors_peaks.show()
     
 
+# moving average and quantiles
 # Removing negative values for windows
 line_sum_windows= line_sum_windows[ line_sum_windows >= 0]
 line_sum_windows = np.convolve(line_sum_windows, np.ones((5,))/5, mode='valid')

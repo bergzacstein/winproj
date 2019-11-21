@@ -18,7 +18,7 @@ def apply_kmeans(ima, clusters_colors = [85, 170, 255]):
 
     imalab = color.rgb2lab(ima)
     X = imalab[:,:,1:3]
-    L = imalab[:,:,0]
+    #L = imalab[:,:,0]
 
     imalab_shapes = np.shape(imalab)
     dim_y, dim_x = np.shape(X)[0], np.shape(X)[1]
