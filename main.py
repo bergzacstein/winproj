@@ -24,62 +24,16 @@ def lazy_imshow(image, grey=True):
         plt.imshow(image)
     plt.show()
 
-def global_preprocessing(image):
-    #Converts from RGB to HSV
-    image_hsv = skimage.color.rgb2hsv(image)
-    image = image_hsv[:,:,0]
-    return image
-
-def edge_detection(image):
-    nb_floors = None
-    return nb_floors
-
-def detect_contrast(image):
-    nb_floors = None
-    return nb_floors
-
 def count_floors(windows_list):
     """From a list of coordinates, corresponding to positions of windows,
     guesses the number of floors of the building."""
     nb_floors = None
     return nb_floors
 
-def similarity_measure(A,B):
-    m = np.exp(-np.linalg.norm(B-A))
-    m /= np.exp(-np.linalg.norm(B))
-    return np.linalg.norm(B-A)/np.linalg.norm(B)
-
-def match_selection(image, selection, step = 4):
-    """image : a numpy array corresponding to a picture.
-    selection : ((topleft_x, topleft_y), (bottomright_x, bottoomright_y))"""
-    #selection_im is the part of the image corresponding to the coordinate selection. 
-    selection_im = image[selection[0][1]:selection[1][1], selection[0][0]:selection[1][0]]
-    selection_width = np.abs(selection[0][0] - selection[1][0])
-    selection_height = np.abs(selection[1][1] - selection[0][1])
-    step = step #instead of doing pixel_wise comparison, we use a step. 
-    lines = image.shape[0] - selection_height 
-    cols = image.shape[1] - selection_width 
-    #similarity_matrix holds the result of our similarity test between selection and
-    # the subsection of image tested. 
-    similarity_matrix = np.zeros((int(lines/step), int(cols/step)))
-    for j in range(0, cols, step): #from left to right
-        for i in range(0, lines, step): #from top to bottom
-            # subsection is now a sample from our image. 
-            subsection = image[i:i+selection_height, j:j+selection_width]
-            sub_selection_im = selection_im#[0:subsection.shape[0], 0:subsection.shape[1]]
-            # We score the similarity between subsection and selection_im.
-            # This can be done using various measures.
-            similarity = similarity_measure(subsection, sub_selection_im)
-            try:
-                # instead of creating a smaller image
-                # add a square of color similarity and of shape selection_im to
-                # a big picture
-                similarity_matrix[int(i/step), int(j/step)] = similarity
-            except:
-                print(i/step,j/step)
-    
-    nb_floors = None
-    return nb_floors, similarity_matrix
+import matchsel
+import importlib
+importlib.reload(matchsel)
+from matchsel import *
 
 image = skio.imread('img/telecom.jpeg')
 im_grayscale = skimage.color.rgb2hsv(image)[:,:,2]
@@ -87,8 +41,10 @@ selection = ((708, 393), (757, 529))
 #selection = ((1412, 2572), (1722, 2784))
 #selection = ((1380, 1380), (1550,1550))
 #selection = ((1835, 758), (1897, 949))
-nb_floors, similarity_matrix = match_selection(im_grayscale, selection, 8)
-lazy_imshow(similarity_matrix)
+similarity_matrix = horizontal_match_selection(im_grayscale, selection, sim=exp_sim)
+plt.plot(similarity_matrix)
+plt.show()
+
 
 #median filtering
 #convolve with vertical [-1 0 1]
@@ -111,19 +67,19 @@ nb_floors, similarity_matrix = match_selection(im, selection, 8)
 #???
 #Profit. 
 
+im = scipy.signal.convolve2d(im, np.array([[1,0,-1]]))
+
 lazy_imshow(im)
 lazy_imshow(similarity_matrix)
 
-f = lazy_fft(im)
-lazy_imshow(f)
 
 im = similarity_matrix
 im = scipy.ndimage.filters.maximum_filter(im, 10)
 
 
+np.ones(X_copy.shape)
 
 lazy_imshow(im)
 
-line_sum = np.sum(im, axis=1)
-plt.plot(np.log(line_sum))
-plt.show()
+
+
