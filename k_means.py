@@ -43,8 +43,16 @@ If elbow = True, the elbow method will be performed to determine the cluster siz
 plt.close('all')
 
 # Importing the dataset
-ima = skio.imread('C:/Users/jusugacadavid/OneDrive/Thèse/Recherche/Athens - Image processing/Project/winproj/img/cmp_b0044.jpg', as_gray = False)
+ima = skio.imread('C:/Users/jusugacadavid/OneDrive/Thèse/Recherche/Athens - Image processing/Project/winproj/img/easyBuilding.png', as_gray = False)
 #ima = skio.imread('C:/Users/jusugacadavid/OneDrive/Thèse/Recherche/Athens - Image processing/Project/winproj/img/telecom.jpeg', as_gray = False)
+#dim_x, dim_y = np.shape(ima)[0], np.shape(ima)[1]
+#height = 1024
+#aspect_ratio = dim_x/dim_y
+#
+#ima = cv2.resize(ima, (int(np.round(height*aspect_ratio)), height))
+#ima = cv2.resize(ima, (dim_y//5, dim_x//5))
+
+big_photo = True
 
 # Visualize the image
 image = plt.figure("Original image")
@@ -209,24 +217,32 @@ line_sum_windows[-10:] = 0
 line_sum_floors= line_sum_floors[ line_sum_floors >= 0]
 floors_peaks = plt.figure("Image floors peaks")
 plt.plot(line_sum_floors)
-floor_quantile = np.quantile(line_sum_floors, 0.95)
+floor_quantile = np.quantile(line_sum_floors, 0.92)
 plt.axhline(y = floor_quantile, color = 'r')
 floors_peaks.show()
 
 # Removing negative values for windows
 line_sum_windows= line_sum_windows[ line_sum_windows >= 0]
 windows_peaks = plt.figure("Image window peaks")
-window_quantile = np.quantile(line_sum_windows, 0.95)
+window_quantile = np.quantile(line_sum_windows, 0.92)
 plt.axhline(y = window_quantile, color = 'r')
 plt.plot(line_sum_windows)
 windows_peaks.show()
 
 # moving average and quantiles
 # Removing negative values for floors
-line_sum_floors= line_sum_floors[ line_sum_floors >= 0]
-line_sum_floors = np.convolve(line_sum_floors, np.ones((5,))/5, mode='valid')
+if big_photo == False:
+    MAVG_window = 5
+    line_sum_floors= line_sum_floors[ line_sum_floors >= 0]
+    line_sum_floors = np.convolve(line_sum_floors, np.ones((MAVG_window,))/MAVG_window, mode='valid')
+else:
+    MAVG_window = 40
+    line_sum_floors= line_sum_floors[ line_sum_floors >= 0]
+    line_sum_floors = np.convolve(line_sum_floors, np.ones((MAVG_window,))/MAVG_window, mode='valid')
+    
 floors_peaks_MAVG = plt.figure("Image floors peaks MAVG")
 plt.plot(line_sum_floors)
+# Recalculate the quantile with the new data after moving average
 floor_quantile = np.quantile(line_sum_floors, 0.92)
 plt.axhline(y = floor_quantile, color = 'r')
 floors_peaks.show()
@@ -234,9 +250,17 @@ floors_peaks.show()
 
 # moving average and quantiles
 # Removing negative values for windows
-line_sum_windows= line_sum_windows[ line_sum_windows >= 0]
-line_sum_windows = np.convolve(line_sum_windows, np.ones((5,))/5, mode='valid')
+if big_photo == False:
+    MAVG_window = 5
+    line_sum_windows= line_sum_windows[ line_sum_windows >= 0]
+    line_sum_windows = np.convolve(line_sum_windows, np.ones((MAVG_window,))/MAVG_window, mode='valid')
+else:
+    MAVG_window = 15
+    line_sum_windows= line_sum_windows[ line_sum_windows >= 0]
+    line_sum_windows = np.convolve(line_sum_windows, np.ones((MAVG_window,))/MAVG_window, mode='valid')
+
 windows_peaks_MAVG = plt.figure("Image window peaks MAVG")
+# Recalculate the quantile with the new data after moving average
 window_quantile = np.quantile(line_sum_windows, 0.92)
 plt.axhline(y = window_quantile, color = 'r')
 plt.plot(line_sum_windows)
