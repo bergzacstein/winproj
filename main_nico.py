@@ -82,8 +82,8 @@ def clean_projection(line, beta, wordy=False):
     """Juan's method of cleaning projected edges,
     using manual heuristics and moving average."""
     #line has a lot of noise on the leftmost and rightmost values. Remove them. 
-    line[:40] = 0
-    line[-40:] = 0
+    line[:10] = 0
+    line[-10:] = 0
     #Line also has negative values. TRASH them.
     line = line[line >= 0]
     #This graph is still very spiky. To smoothen it, we compute a moving average. 
@@ -249,11 +249,11 @@ def plot_boxes(boxes, scores, ax):
     for i, box in enumerate(boxes):
         width = np.abs(box[0][0] - box[1][0])
         height = np.abs(box[0][1] - box[1][1])
-        if height > np.quantile(h, 0.5):
+        if height > np.quantile(h, 0.8):
             bottomleft = (box[0][0], box[1][1])
             col = ((1-scores[i]/max(scores)), scores[i]/max(scores), 0)
-            alpha = 0.5 + 0.5*scores[i]/max(scores)
-            r = Rectangle(bottomleft, width, height,linewidth=1,edgecolor=col,facecolor='none', alpha=alpha)
+            alpha = 0.7 + 0.3*scores[i]/max(scores)
+            r = Rectangle(bottomleft, width, height,linewidth=1.5,edgecolor=col,facecolor='none', alpha=alpha)
             ax.add_patch(r)
     
 
@@ -276,7 +276,8 @@ def nicolas(imagefile):
     image = skio.imread(imagefile)
     gray_im = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image_eq = cv2.equalizeHist(gray_im)
-    floors, windows = juan_routine(image_eq, 0.95, 3, True, True, True)
+    #lazy_imshow(image_eq)
+    floors, windows = juan_routine(image_eq, 0.95, 1, True, True, True)
 
     print('Finding and scoring boxes...')
     boxes, scores = get_boxes_and_scores(image, floors, windows, 0.8)
@@ -288,7 +289,7 @@ def nicolas(imagefile):
 
     nb_floors = guess_nb_floors(boxes, scores, 0.1, 0.99)
     print('Number of floors guessed : ', nb_floors)
-    return nb_floors, boxes, scores
+    return nb_floors
 
 nicolas('img/cropped_telecom.jpg')
 
