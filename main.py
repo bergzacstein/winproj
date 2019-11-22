@@ -38,22 +38,6 @@ def count_floors(windows_list):
     return nb_floors
 
 
-def score_windowness(sim_matrix, ceil = 0.95):
-    """According to a similarity vector, return a windowness score.
-    This score is high if the window was found several times on the same row. 
-    The higher the value, the more likely it is to be a window. """
-    peaks = sim_matrix[sim_matrix >= np.quantile(sim_matrix, ceil)]
-    #Normalization
-    peaks = (peaks - min(peaks))
-    peaks = peaks / max(peaks)
-    #Take 100 best values
-    n = min(len(sim_matrix), 200)
-    peaks = peaks[np.argsort(peaks)[-n:]]
-    #A good number of windows on a row is between 
-    score = np.sum(peaks) / len(peaks)
-    return score
-
-
 def h_edges(im_rvb):
     """Magic function by Mateusz which returns a highly contrasted
     image with the horizontal edges."""
@@ -87,7 +71,7 @@ def project_edges(image, axis=0, wordy=False):
     return line_sum
 
 
-def clean_projection(line, wordy=False):
+def clean_projection(line, beta, wordy=False):
     """Juan's method of cleaning projected edges,
     using manual heuristics and moving average."""
     #line has a lot of noise on the leftmost and rightmost values. Remove them. 
@@ -96,11 +80,11 @@ def clean_projection(line, wordy=False):
     #Line sum also has negative values. TRASH them.
     line = line[line >= 0]
     #This graph is still very spiky. To smoothen it, we compute a moving average. 
-    line = np.convolve(line, np.ones((5,))/5, mode='valid')
+    line = np.convolve(line, np.ones((beta,))/beta, mode='valid')
     return line
 
 
-def detect_peaks(line, alpha=0.92):
+def detect_peaks_nb(line, alpha=0.92):
     """Juan's method of detecting peaks in a line.
     If 0 is the road, and a value over quantile (alpha) is a bump, 
     we just count the number of bumps in the road."""
@@ -129,13 +113,14 @@ def mateusz_routine(image, wordy=True):
     return sumx 
 
 
-def juan_routine(image, alpha=0.92, wordy=True):
+def juan_routine(image, alpha=0.92, beta=4, get_peaks=False, wordy=True):
     """Juan's routine to guesstimate the number of floors and windows of a building.
     Takes a clustered image as an input. Returns (nb_floors, nb_windows).
-    alpha is selectivity. Higher alpha = less floors found."""
+    alpha is selectivity. Higher alpha = less floors found.
+    beta is the smoothening coefficient. Higher = less floors found. """
     # Compute projections of horizontal and vertical edges
-    floors = project_edges(clustered_image, axis=0, wordy=True)
-    windows = project_edges(clustered_image, axis=1, wordy=True)
+    floors = project_edges(clustered_image, axis=0, wordy=wordy)
+    windows = project_edges(clustered_image, axis=1, wordy=wordy)
 
     def disp_wordy(floors, windows, alpha, wordy):
         """Used in juan_routine() to display graphs."""
@@ -150,21 +135,78 @@ def juan_routine(image, alpha=0.92, wordy=True):
     disp_wordy(floors, windows, alpha, wordy)
 
     # Clean those projections.
-    floors = clean_projection(floors)
-    windows = clean_projection(windows)
+    floors = clean_projection(floors, beta)
+    windows = clean_projection(windows, beta)
     disp_wordy(floors, windows, alpha, wordy)
     
-    # Smartly find how many peaks are there. This depends on the alpha parameter.  
-    floors = detect_peaks(floors, alpha)
-    windows = detect_peaks(windows, alpha)
-    
-    # Finally, guess the number of windows and floors.
-    nb_floors = sum(floors)
-    nb_windows = sum(floors)*sum(windows) # Assume that every floor has the same number of windows.
-    return nb_floors, nb_windows
+    if get_peaks:
+        return floors, windows
+    else:
+        # Smartly find how many peaks are there. This depends on the alpha parameter.  
+        # Finally, guess the number of windows and floors.
+        nb_floors = sum(detect_peaks_nb(floors, alpha))
+        nb_windows = sum(detect_peaks_nb(windows, alpha))*nb_floors # Assume that every floor has the same number of windows.
+        return nb_floors, nb_windows
+
+def detect_peaks_coordinates(line, alpha=0.92):
+    """Given a lists of spiky value, keep only the spikes
+    that are above quantile of (alpha), and then look for the index of the max of these spikes."""
+    quantile = np.quantile(line, alpha)
+    peaks_clusters = []
+    temp_list = []
+    last_value = 0
+    for i, value in enumerate(line):
+        if value >= quantile and last_value >= 0:
+            temp_list.append((i,value))
+        else:
+            if temp_list != []:
+                peaks_clusters.append(temp_list)
+            temp_list = []
+        last_value = value
+    #peaks_cluster is now a list of lists, containing tuples (index, values)
+    #For each sublist, we look for max(values) and return corresponding coordinate in the picture. 
+    max_indexes = []
+    for cluster in peaks_clusters:
+        indexes, values = zip(*cluster)
+        maximum = max(values)
+        index = indexes[values.index(maximum)]
+        max_indexes.append(index)
+    return max_indexes
 
 
-def nicolas_routine(wordy=True):
+def score_windowness(line, ceil = 0.95):
+    """According to a similarity vector, return a windowness score.
+    This score is high if the window was found several times on the same row. 
+    The higher the value, the more likely it is to be a window. """
+    score = sum(detect_peaks_nb(line, ceil))
+    return score
+
+
+def get_boxes_and_scores(image, floors, windows, alpha, wordy=False):
+    """Nicolas' 4AM insomnia algorithm """
+    floors_coords  = detect_peaks_coordinates(floors, alpha)
+    windows_coords = detect_peaks_coordinates(windows, alpha)
+    n = len(floors_coords) - 1
+    m = len(windows_coords) - 1
+    boxes_and_score = []
+    for i in range(n): #iterate through floors
+        for j in range(m): #iterate through windows
+            topleft_x = windows_coords[j]
+            topleft_y = floors_coords[i]
+            bottomright_x = windows_coords[j+1]
+            bottomright_y = floors_coords[i+1]
+            selection = ((topleft_x, topleft_y), (bottomright_x, bottomright_y))
+            similarity = horizontal_match_selection(image, selection)
+            score = score_windowness(similarity)
+            boxes_and_score.append((selection, score))
+    boxes, scores = list(zip(*boxes_and_score))
+    return boxes, scores
+
+def guess_nb_floors(boxes, scores, wordy=False):
+    pass
+
+
+def nicolas_demonstration(wordy=True):
     """Demonstrates how windowness works.
     Picks one selection and looks for similar patterns on the same line."""
     image = skio.imread('img/telecom.jpeg')
@@ -185,13 +227,14 @@ image = skio.imread('img/telecom.jpeg')
 ### Matheu's routine
 mateusz_routine(image)
 
-### Nicolas' routine
-nicolas_routine()
-
 ### Juan's routine
 
 # Compute the adaptative equalized histogram 
 image_eq = skimage.exposure.equalize_adapthist(image, clip_limit=0.03)
 #Apply k-means classification to the picture, with k=3
 clustered_image = apply_kmeans(image_eq)
-juan_routine(clustered_image, 0.92, True)
+floors, windows = juan_routine(clustered_image, 0.92, True, False)
+
+### Nicolas' routine
+
+boxes, scores = get_boxes_and_scores(clustered_image, floors, windows, 0.92)

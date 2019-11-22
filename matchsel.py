@@ -33,6 +33,7 @@ def horizontal_match_selection(image, selection, step=1, sim=l2_sim):
         similarities[row-begin] = similarity
     return similarities
 
+
 def match_selection(image, selection, step = 4, sim = l2_sim):
     """image : a numpy array corresponding to a picture.
     selection : ((topleft_x, topleft_y), (bottomright_x, bottoomright_y))"""
@@ -63,4 +64,6 @@ def match_selection(image, selection, step = 4, sim = l2_sim):
                 print(i/step,j/step)
     
     return similarity_matrix
+
+
 
