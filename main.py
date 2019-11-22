@@ -54,7 +54,7 @@ def h_edges(im_rvb):
     return im
 
 
-def project_edges(image, axis=0, wordy=False):
+def project_edges(image, axis=0, wordy=False, mateusz=False):
     """Juan's method to project edges.
     (image) is a k-means clustered image. """
     #Approximate the horizontal or vertical gradient using linear filtering. 
@@ -62,10 +62,14 @@ def project_edges(image, axis=0, wordy=False):
         kernel = np.array([[1, 1, 1] ,[0, 0, 0] , [-1, -1, -1]])
     elif axis == 1: #Windows
         kernel = np.array([[-1 , 0 ,1], [-1 , 0 ,1], [-1 , 0 ,1]])
-    im = scipy.signal.convolve2d(image, kernel)
+    if mateusz: 
+        im = cv2.filter2D(image, -1, kernel)
+        #kernel = np.ones((3,3),np.uint8)
+        #im = 1-cv2.morphologyEx(im, cv2.MORPH_OPEN, kernel)
+    else: 
+        im = scipy.signal.convolve2d(image, kernel)
     #Opening
-    #kernel = np.ones((4,4),np.uint8)
-    #im = cv2.morphologyEx(im, cv2.MORPH_OPEN, kernel)
+
     if wordy:
         lazy_imshow(im)
     #We project these gradient values on an axis by summing them.  
@@ -80,7 +84,7 @@ def clean_projection(line, beta, wordy=False):
     #line has a lot of noise on the leftmost and rightmost values. Remove them. 
     line[:40] = 0
     line[-40:] = 0
-    #Line sum also has negative values. TRASH them.
+    #Line also has negative values. TRASH them.
     line = line[line >= 0]
     #This graph is still very spiky. To smoothen it, we compute a moving average. 
     line = np.convolve(line, np.ones((beta,))/beta, mode='valid')
@@ -116,14 +120,14 @@ def mateusz_routine(image, wordy=True):
     return openingx, sumx 
 
 
-def juan_routine(image, alpha=0.92, beta=4, get_peaks=False, wordy=True):
+def juan_routine(image, alpha=0.92, beta=4, get_peaks=False, wordy=True, mateusz=False):
     """Juan's routine to guesstimate the number of floors and windows of a building.
     Takes a clustered image as an input. Returns (nb_floors, nb_windows).
     alpha is selectivity. Higher alpha = less floors found.
     beta is the smoothening coefficient. Higher = less floors found. """
     # Compute projections of horizontal and vertical edges
-    floors = project_edges(clustered_image, axis=0, wordy=wordy)
-    windows = project_edges(clustered_image, axis=1, wordy=wordy)
+    floors = project_edges(image, axis=0, wordy=wordy, mateusz=mateusz)
+    windows = project_edges(image, axis=1, wordy=wordy, mateusz=mateusz)
 
     def disp_wordy(floors, windows, alpha, wordy):
         """Used in juan_routine() to display graphs."""
@@ -209,7 +213,7 @@ def get_boxes_and_scores(image, floors, windows, alpha, wordy=False):
     return boxes, scores
 
 
-def guess_nb_floors(boxes, scores, delta=0.1, wordy=False):
+def guess_nb_floors(boxes, scores, delta=0.1, gamma=0.5, wordy=False):
     """delta : repetition sensibility"""
     ceil = np.quantile(scores, delta)
     assumed_windows = []
@@ -233,29 +237,59 @@ def guess_nb_floors(boxes, scores, delta=0.1, wordy=False):
     # First, compute a quick and dirty estimate.
     building_size = max(bottomright_y) - min(topleft_y)
     window_sizes = np.abs(bottomright_y - topleft_y)
-    quick_nb_floors = building_size / np.average(window_sizes)
-
+    quick_nb_floors = building_size / np.quantile(window_sizes, gamma)
     return quick_nb_floors
+
+def plot_boxes(boxes, scores, ax):
+    from matplotlib.patches import Rectangle
+    h = []
+    for box in boxes:
+        h.append(np.abs(box[0][1] - box[1][1]))
+    h = np.array(h)
+    for i, box in enumerate(boxes):
+        width = np.abs(box[0][0] - box[1][0])
+        height = np.abs(box[0][1] - box[1][1])
+        if height > np.quantile(h, 0.5):
+            bottomleft = (box[0][0], box[1][1])
+            col = ((1-scores[i]/max(scores)), scores[i]/max(scores), 0)
+            alpha = 0.5 + 0.5*scores[i]/max(scores)
+            r = Rectangle(bottomleft, width, height,linewidth=1,edgecolor=col,facecolor='none', alpha=alpha)
+            ax.add_patch(r)
     
 
-#Load a picture
-image = skio.imread('img/telecom.jpeg')
+def juan(imagefile):
+    #Load a picture
+    image = skio.imread(imagefile)
 
-### Matheu's routine
-openingx, sumx = mateusz_routine(image)
+    ### Matheu's routine
+    openingx, sumx = mateusz_routine(image, True)
+    # Compute the adaptative equalized histogram 
+    image_eq = skimage.exposure.equalize_adapthist(image, clip_limit=0.03)
 
-
-### Juan's routine
-
-# Compute the adaptative equalized histogram 
-image_eq = skimage.exposure.equalize_adapthist(image, clip_limit=0.03)
-
-#Apply k-means classification to the picture, with k=3
-clustered_image = apply_kmeans(image_eq)
-floors, windows = juan_routine(clustered_image, 0.92, 12, True, True)
+    #Apply k-means classification to the picture, with k=3
+    clustered_image = apply_kmeans(image_eq)
+    floors, windows = juan_routine(image_eq, 0.92, 5, True, True)
 
 ### Nicolas' routine
 
-boxes, scores = get_boxes_and_scores(image_eq, floors, windows, 0.92)
-nb_floors = guess_nb_floors(boxes, scores, 0.1)
-print('Number of floors : ', nb_floors)
+def nicolas(imagefile):
+    image = skio.imread(imagefile)
+    gray_im = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image_eq = cv2.equalizeHist(gray_im)
+    floors, windows = juan_routine(image_eq, 0.95, 3, True, True, True)
+
+    print('Finding and scoring boxes...')
+    boxes, scores = get_boxes_and_scores(image, floors, windows, 0.8)
+
+    fig, ax = plt.subplots(1)
+    ax.imshow(image)
+    plot_boxes(boxes, scores, ax)
+    plt.show()
+
+    nb_floors = guess_nb_floors(boxes, scores, 0.1, 0.99)
+    print('Number of floors guessed : ', nb_floors)
+    return nb_floors, boxes, scores
+
+nicolas('img/cropped_telecom.jpg')
+
+
