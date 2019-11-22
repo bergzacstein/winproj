@@ -1,5 +1,5 @@
 
-distortedPic=imread('distorted/strangeWindows.jpg');
+distortedPic=imread('distorted/third.jpg');
 figure('Name','Loaded Image');
 imshow(distortedPic);
 [x,y] = getpts;
