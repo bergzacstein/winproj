@@ -34,7 +34,7 @@ import scipy
 
 #def k_means(elbow = False):
 
-elbow = False
+elbow = True
 """
 Returns the a matrix with the clustered image with 3 clusters
 If elbow = True, the elbow method will be performed to determine the cluster size
@@ -43,7 +43,7 @@ If elbow = True, the elbow method will be performed to determine the cluster siz
 plt.close('all')
 
 # Importing the dataset
-ima = skio.imread('C:/Users/jusugacadavid/OneDrive/Thèse/Recherche/Athens - Image processing/Project/winproj/img/easyBuilding.png', as_gray = False)
+ima = skio.imread('C:/Users/jusugacadavid/OneDrive/Thèse/Recherche/Athens - Image processing/Project/winproj/img/cmp_b0011.jpg', as_gray = False)
 #ima = skio.imread('C:/Users/jusugacadavid/OneDrive/Thèse/Recherche/Athens - Image processing/Project/winproj/img/telecom.jpeg', as_gray = False)
 #dim_x, dim_y = np.shape(ima)[0], np.shape(ima)[1]
 #height = 1024
@@ -52,7 +52,7 @@ ima = skio.imread('C:/Users/jusugacadavid/OneDrive/Thèse/Recherche/Athens - Ima
 #ima = cv2.resize(ima, (int(np.round(height*aspect_ratio)), height))
 #ima = cv2.resize(ima, (dim_y//5, dim_x//5))
 
-big_photo = True
+big_photo = False
 
 # Visualize the image
 image = plt.figure("Original image")
@@ -97,16 +97,16 @@ kmeans = KMeans(n_clusters = 3, init = 'k-means++',
 y_kmeans = kmeans.fit_predict(X_res) #We use fir predict to get the cluster to which each instance belong
 
 # Visualizing the clusters
-#    Cluster_graph = plt.figure("Clusters")
-#    plt.scatter(X_res[y_kmeans == 0, 0], X_res[y_kmeans == 0, 1], s = 100, c = 'red', label = 'cluster 1')
-#    plt.scatter(X_res[y_kmeans == 1, 0], X_res[y_kmeans == 1, 1], s = 100, c = 'blue', label = 'cluster 2')
-#    plt.scatter(X_res[y_kmeans == 2, 0], X_res[y_kmeans == 2, 1], s = 100, c = 'green', label = 'cluster 3')
-#    plt.scatter(X_res[y_kmeans == 3, 0], X_res[y_kmeans == 3, 1], s = 100, c = 'cyan', label = 'cluster 4')
-#    #plt.scatter(X_res[y_kmeans == 4, 0], X_res[y_kmeans == 4, 1], s = 100, c = 'magenta', label = 'cluster 5')
-#    plt.scatter(kmeans.cluster_centers_[:,0],kmeans.cluster_centers_[:,1], s = 300, c = 'black',marker = 'x', label = 'Centroids')
-#    plt.title('Clusters')
-#    plt.legend()
-#    plt.show()
+Cluster_graph = plt.figure("Clusters")
+plt.scatter(X_res[y_kmeans == 0, 0], X_res[y_kmeans == 0, 1], s = 100, c = 'red', label = 'cluster 1')
+plt.scatter(X_res[y_kmeans == 1, 0], X_res[y_kmeans == 1, 1], s = 100, c = 'blue', label = 'cluster 2')
+plt.scatter(X_res[y_kmeans == 2, 0], X_res[y_kmeans == 2, 1], s = 100, c = 'green', label = 'cluster 3')
+#plt.scatter(X_res[y_kmeans == 3, 0], X_res[y_kmeans == 3, 1], s = 100, c = 'cyan', label = 'cluster 4')
+#plt.scatter(X_res[y_kmeans == 4, 0], X_res[y_kmeans == 4, 1], s = 100, c = 'magenta', label = 'cluster 5')
+plt.scatter(kmeans.cluster_centers_[:,0],kmeans.cluster_centers_[:,1], s = 300, c = 'black',marker = 'x', label = 'Centroids')
+plt.title('Clusters')
+plt.legend()
+plt.show()
 
 copy_X = np.copy(X_res)
 
@@ -188,11 +188,11 @@ line_sum_floors = np.sum(im, axis = 1)
 image_edges_windows = plt.figure("image windows")
 im = scipy.signal.convolve2d(copy_X, np.array([[-1 , 0 ,1], [-1 , 0 ,1], [-1 , 0 ,1]]))
 #im = scipy.signal.convolve2d(copy_X, np.array([[-1 , 0 ,1]]))
-#plt.imshow(im, cmap = "gray")
-#image_edges_windows.show()
+plt.imshow(im, cmap = "gray")
+image_edges_windows.show()
 
 # row wise sum of values
-windows_peaks = plt.figure("Image window peaks")
+#windows_peaks = plt.figure("Image window peaks")
 line_sum_windows = (np.sum(im, axis = 0))
 #plt.plot(line_sum_windows)
 #windows_peaks.show()
